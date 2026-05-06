@@ -1,25 +1,40 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from main import app
+from httpx import AsyncClient
 
 @pytest.mark.asyncio
-async def test_cursor_pagination():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        for i in range(5):
-            await ac.post("/books/", json={
-                "title": f"Cursor Book {i}",
-                "author": "Author",
-                "status": "наявна в бібліотеці",
-                "release_year": 2020
-            })
-        
-        res1 = await ac.get("/books/?limit=2")
-        data1 = res1.json()
-        assert len(data1["items"]) == 2
-        assert data1["next_cursor"] is not None
-        
-        next_cursor = data1["next_cursor"]
-        res2 = await ac.get(f"/books/?limit=2&cursor={next_cursor}")
-        data2 = res2.json()
-        assert len(data2["items"]) <= 2
-        assert data2["items"][0]["id"] != data1["items"][0]["id"]
+async def test_create_and_paginate_books(client: AsyncClient):
+    
+    books_to_create = [
+        {"title": "Test Book 1", "author": "Author 1", "status": "наявна в бібліотеці", "release_year": 2024},
+        {"title": "Test Book 2", "author": "Author 2", "status": "наявна в бібліотеці", "release_year": 2024},
+        {"title": "Test Book 3", "author": "Author 3", "status": "наявна в бібліотеці", "release_year": 2024},
+    ]
+    
+    for book in books_to_create:
+        await client.post("/books/", json=book)
+
+    
+    response = await client.get("/books/?limit=2&offset=0")
+    assert response.status_code == 200
+    data_page_1 = response.json()
+    assert isinstance(data_page_1, list)
+    assert len(data_page_1) == 2
+
+   
+    response = await client.get("/books/?limit=2&offset=2")
+    assert response.status_code == 200
+    data_page_2 = response.json()
+    
+    
+    assert len(data_page_2) >= 1
+    assert data_page_2[0]["id"] != data_page_1[0]["id"]
+
+@pytest.mark.asyncio
+async def test_get_book_by_id(client: AsyncClient):
+    book_data = {"title": "Unique Book", "author": "Author", "status": "наявна в бібліотеці", "release_year": 2024}
+    create_res = await client.post("/books/", json=book_data)
+    book_id = create_res.json()["id"]
+
+    response = await client.get(f"/books/{book_id}") 
+    assert response.status_code == 200
+    assert response.json()["title"] == "Unique Book"

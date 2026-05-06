@@ -1,22 +1,16 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import NullPool  # Додай цей імпорт
+from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@db:5432/library_db")
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://root:password@mongodb:27017/")
 
 
-engine = create_async_engine(
-    DATABASE_URL, 
-    echo=True, 
-    poolclass=NullPool
-)
-
-SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
-
-class Base(DeclarativeBase):
-    pass
+def get_mongo_client():
+    return AsyncIOMotorClient(MONGO_URL)
 
 async def get_db():
-    async with SessionLocal() as session:
-        yield session
+    client = get_mongo_client()
+    db = client.library_db
+    try:
+        yield db
+    finally:
+        client.close()
