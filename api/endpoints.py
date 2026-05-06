@@ -1,24 +1,24 @@
 from fastapi import APIRouter, HTTPException, status, Query, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 from database import get_db
-from schemas.book import Book, BookCreate, BookStatus
+from schemas.book import Book, BookCreate, BookStatus, BookCursorPaginationResponse
 from services.book_service import BookService
 
 router = APIRouter(prefix="/books", tags=["books"])
 
-@router.get("/", response_model=List[Book], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=BookCursorPaginationResponse, status_code=status.HTTP_200_OK)
 async def get_all_books(
     limit: int = Query(10, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    cursor: Optional[UUID] = None,
     status: Optional[BookStatus] = None,
     author: Optional[str] = None,
-    sort_by: Optional[str] = Query(None, pattern="^(title|release_year)$"),
     db: AsyncSession = Depends(get_db)
 ):
     service = BookService(db)
-    return await service.get_books(limit, offset, status, author, sort_by)
+    items, next_cursor = await service.repository.get_all_cursor(limit, cursor, status, author)
+    return {"items": items, "next_cursor": next_cursor}
 
 @router.get("/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
 async def get_book(book_id: UUID, db: AsyncSession = Depends(get_db)):

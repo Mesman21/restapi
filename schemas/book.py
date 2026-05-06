@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 
 class BookStatus(str, Enum):
     AVAILABLE = "наявна в бібліотеці"
@@ -20,3 +20,7 @@ class BookCreate(BookBase):
 class Book(BookBase):
     id: UUID
     model_config = ConfigDict(from_attributes=True)
+
+class BookCursorPaginationResponse(BaseModel):
+    items: List[Book]
+    next_cursor: Optional[UUID]
