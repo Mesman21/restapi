@@ -1,44 +1,21 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-import uuid
-from repository.book_repo import BookRepository
-from schemas.book import BookCreate, BookResponse
+from uuid import UUID
+from repository.book_repository import BookRepository
+from schemas.book import BookCreate, BookStatus
 
 class BookService:
-    def __init__(self):
-        self.repo = BookRepository()
+    def __init__(self, session: AsyncSession):
+        self.repository = BookRepository(session)
 
-    async def get_all_books(
-        self, 
-        author: Optional[str] = None, 
-        status: Optional[str] = None, 
-        sort_by: Optional[str] = None
-    ) -> List[BookResponse]:
-        books = await self.repo.get_all()
-        
-        if author:
-            books = [b for b in books if author.lower() in b["author"].lower()]
-        if status:
-            books = [b for b in books if b["status"] == status]
-        
-        if sort_by == "title":
-            books = sorted(books, key=lambda x: x["title"])
-        elif sort_by == "year":
-            books = sorted(books, key=lambda x: x["year"])
-            
-        return [BookResponse(**b) for b in books]
+    async def get_books(self, limit: int, offset: int, status: Optional[BookStatus], author: Optional[str], sort_by: Optional[str]):
+        return await self.repository.get_all(limit, offset, status, author, sort_by)
 
-    async def get_book(self, book_id: uuid.UUID) -> Optional[BookResponse]:
-        book = await self.repo.get_by_id(book_id)
-        if book:
-            return BookResponse(**book)
-        return None
+    async def get_book(self, book_id: UUID):
+        return await self.repository.get_by_id(book_id)
 
-    async def create_book(self, book: BookCreate) -> BookResponse:
-        new_id = uuid.uuid4()
-        book_dict = book.model_dump()
-        book_dict["id"] = new_id
-        await self.repo.add(book_dict)
-        return BookResponse(**book_dict)
+    async def create_book(self, book_in: BookCreate):
+        return await self.repository.create(book_in)
 
-    async def delete_book(self, book_id: uuid.UUID) -> None:
-        await self.repo.delete(book_id)
+    async def delete_book(self, book_id: UUID):
+        await self.repository.delete(book_id)
