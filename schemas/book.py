@@ -1,8 +1,21 @@
-from marshmallow import Schema, fields, validate
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
 
-class BookSchema(Schema):
-    title = fields.Str(required=True)
-    author = fields.Str(required=True)
-    description = fields.Str()
-    status = fields.Str(validate=validate.OneOf(["наявні в бібліотеці", "видані комусь"]))
-    year = fields.Int(required=True)
+class BookBase(BaseModel):
+    title: str
+    author: str
+    description: Optional[str] = None
+    status: str
+    year: int
+
+class BookCreate(BookBase):
+    pass
+
+class BookResponse(BookBase):
+    id: str = Field(alias="_id")
+
+    # Новий спосіб налаштування у Pydantic V2
+    model_config = ConfigDict(
+        populate_by_name=True,
+        from_attributes=True
+    )
