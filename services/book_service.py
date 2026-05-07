@@ -1,44 +1,23 @@
-from typing import List, Optional
-import uuid
-from repository.book_repo import BookRepository
-from schemas.book import BookCreate, BookResponse
+from repository.book_repository import BookRepository
 
 class BookService:
-    def __init__(self):
-        self.repo = BookRepository()
-
-    async def get_all_books(
-        self, 
-        author: Optional[str] = None, 
-        status: Optional[str] = None, 
-        sort_by: Optional[str] = None
-    ) -> List[BookResponse]:
-        books = await self.repo.get_all()
-        
-        if author:
-            books = [b for b in books if author.lower() in b["author"].lower()]
+    @staticmethod
+    async def get_books(status, author, sort_by):
+        query = {}
         if status:
-            books = [b for b in books if b["status"] == status]
-        
-        if sort_by == "title":
-            books = sorted(books, key=lambda x: x["title"])
-        elif sort_by == "year":
-            books = sorted(books, key=lambda x: x["year"])
-            
-        return [BookResponse(**b) for b in books]
+            query['status'] = status
+        if author:
+            query['author'] = author
+        return await BookRepository.get_all(query, sort_by)
 
-    async def get_book(self, book_id: uuid.UUID) -> Optional[BookResponse]:
-        book = await self.repo.get_by_id(book_id)
-        if book:
-            return BookResponse(**book)
-        return None
+    @staticmethod
+    async def get_book(book_id):
+        return await BookRepository.get_by_id(book_id)
 
-    async def create_book(self, book: BookCreate) -> BookResponse:
-        new_id = uuid.uuid4()
-        book_dict = book.model_dump()
-        book_dict["id"] = new_id
-        await self.repo.add(book_dict)
-        return BookResponse(**book_dict)
+    @staticmethod
+    async def create_book(book_data):
+        return await BookRepository.create(book_data)
 
-    async def delete_book(self, book_id: uuid.UUID) -> None:
-        await self.repo.delete(book_id)
+    @staticmethod
+    async def delete_book(book_id):
+        await BookRepository.delete(book_id)
