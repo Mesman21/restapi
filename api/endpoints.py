@@ -1,39 +1,93 @@
-from fastapi import APIRouter, HTTPException, status, Query, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from typing import List
-from uuid import UUID
-from database import get_db
-from schemas.book import Book, BookCreate
+from flask import request
+from flask_restful import Resource
+from flasgger import swag_from
 from services.book_service import BookService
 
-router = APIRouter(prefix="/books", tags=["books"])
+get_books_spec = {
+    "tags": ["Books"],
+    "parameters": [
+        {"name": "status", "in": "query", "type": "string"},
+        {"name": "author", "in": "query", "type": "string"},
+        {"name": "sort_by", "in": "query", "type": "string"}
+    ],
+    "responses": {
+        "200": {"description": "List of books"}
+    }
+}
 
-@router.get("/", response_model=List[Book], status_code=status.HTTP_200_OK)
-async def get_all_books(
-    limit: int = Query(10, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    db: AsyncIOMotorDatabase = Depends(get_db)
-):
-    service = BookService(db)
-    return await service.repository.get_all(limit, offset)
+post_book_spec = {
+    "tags": ["Books"],
+    "parameters": [
+        {
+            "in": "body",
+            "name": "body",
+            "required": True,
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "author": {"type": "string"},
+                    "description": {"type": "string"},
+                    "status": {"type": "string"},
+                    "year": {"type": "integer"}
+                }
+            }
+        }
+    ],
+    "responses": {
+        "201": {"description": "Book created"},
+        "400": {"description": "Validation error"}
+    }
+}
 
-@router.get("/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
-async def get_book(book_id: UUID, db: AsyncIOMotorDatabase = Depends(get_db)):
-    service = BookService(db)
-    book = await service.repository.get_by_id(book_id)
-    if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
-    return book
+get_book_spec = {
+    "tags": ["Books"],
+    "parameters": [
+        {"name": "book_id", "in": "path", "type": "string", "required": True}
+    ],
+    "responses": {
+        "200": {"description": "Book data"},
+        "404": {"description": "Book not found"}
+    }
+}
 
-@router.post("/", response_model=Book, status_code=status.HTTP_201_CREATED)
-async def create_book(book_in: BookCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
-    service = BookService(db)
-    return await service.repository.create(book_in)
+delete_book_spec = {
+    "tags": ["Books"],
+    "parameters": [
+        {"name": "book_id", "in": "path", "type": "string", "required": True}
+    ],
+    "responses": {
+        "204": {"description": "Book deleted"}
+    }
+}
 
-@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_book(book_id: UUID, db: AsyncIOMotorDatabase = Depends(get_db)):
-    service = BookService(db)
-    success = await service.repository.delete(book_id)
-    if not success:
-        pass
-    return None
+class BookList(Resource):
+    @swag_from(get_books_spec)
+    def get(self):
+        status = request.args.get('status')
+        author = request.args.get('author')
+        sort_by = request.args.get('sort_by')
+        
+        books = BookService.get_books(status, author, sort_by)
+        return books, 200
+
+    @swag_from(post_book_spec)
+    def post(self):
+        data = request.get_json()
+        book, errors = BookService.create_book(data)
+        if errors:
+            return {"errors": errors}, 400
+        return book, 201
+
+class BookItem(Resource):
+    @swag_from(get_book_spec)
+    def get(self, book_id):
+        book = BookService.get_book(book_id)
+        if not book:
+            return {"message": "Not found"}, 404
+        return book, 200
+
+    @swag_from(delete_book_spec)
+    def delete(self, book_id):
+        BookService.delete_book(book_id)
+        return '', 204

@@ -1,25 +1,31 @@
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from typing import List, Optional
-from uuid import UUID, uuid4
-from schemas.book import BookCreate
+from bson import ObjectId
+from database import books_collection
 
 class BookRepository:
-    def __init__(self, db: AsyncIOMotorDatabase):
-        self.collection = db.books
+    @staticmethod
+    def get_all(query, sort_by=None):
+        cursor = books_collection.find(query)
+        if sort_by in ['title', 'year']:
+            cursor = cursor.sort(sort_by, 1)
+        books = []
+        for book in cursor:
+            book['_id'] = str(book['_id'])
+            books.append(book)
+        return books
 
-    async def get_all(self, limit: int, offset: int) -> List[dict]:
-        cursor = self.collection.find().skip(offset).limit(limit)
-        return await cursor.to_list(length=limit)
+    @staticmethod
+    def get_by_id(book_id):
+        book = books_collection.find_one({"_id": ObjectId(book_id)})
+        if book:
+            book['_id'] = str(book['_id'])
+        return book
 
-    async def get_by_id(self, book_id: UUID) -> Optional[dict]:
-        return await self.collection.find_one({"id": str(book_id)})
+    @staticmethod
+    def create(data):
+        result = books_collection.insert_one(data)
+        data['_id'] = str(result.inserted_id)
+        return data
 
-    async def create(self, book_data: BookCreate) -> dict:
-        book_dict = book_data.model_dump()
-        book_dict["id"] = str(uuid4())
-        await self.collection.insert_one(book_dict)
-        return book_dict
-
-    async def delete(self, book_id: UUID) -> bool:
-        result = await self.collection.delete_one({"id": str(book_id)})
-        return result.deleted_count > 0
+    @staticmethod
+    def delete(book_id):
+        books_collection.delete_one({"_id": ObjectId(book_id)})

@@ -1,0 +1,10 @@
+tags:
+  - Books
+parameters:
+  - name: book_id
+    in: path
+    type: string
+    required: true
+responses:
+  204:
+    description: Book deleted

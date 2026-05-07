@@ -1,40 +1,58 @@
-import pytest
-from httpx import AsyncClient
+import json
 
-@pytest.mark.asyncio
-async def test_create_and_paginate_books(client: AsyncClient):
-    
-    books_to_create = [
-        {"title": "Test Book 1", "author": "Author 1", "status": "наявна в бібліотеці", "release_year": 2024},
-        {"title": "Test Book 2", "author": "Author 2", "status": "наявна в бібліотеці", "release_year": 2024},
-        {"title": "Test Book 3", "author": "Author 3", "status": "наявна в бібліотеці", "release_year": 2024},
-    ]
-    
-    for book in books_to_create:
-        await client.post("/books/", json=book)
+def test_create_book(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    response = client.post('/books', json=data)
+    assert response.status_code == 201
+    assert "1984" in response.get_data(as_text=True)
 
-    
-    response = await client.get("/books/?limit=2&offset=0")
+def test_get_books(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    client.post('/books', json=data)
+    response = client.get('/books')
     assert response.status_code == 200
-    data_page_1 = response.json()
-    assert isinstance(data_page_1, list)
-    assert len(data_page_1) == 2
+    assert "1984" in response.get_data(as_text=True)
 
-   
-    response = await client.get("/books/?limit=2&offset=2")
-    assert response.status_code == 200
-    data_page_2 = response.json()
+def test_get_book(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    post_response = client.post('/books', json=data)
+    book_id = json.loads(post_response.data)['_id']
     
-    
-    assert len(data_page_2) >= 1
-    assert data_page_2[0]["id"] != data_page_1[0]["id"]
-
-@pytest.mark.asyncio
-async def test_get_book_by_id(client: AsyncClient):
-    book_data = {"title": "Unique Book", "author": "Author", "status": "наявна в бібліотеці", "release_year": 2024}
-    create_res = await client.post("/books/", json=book_data)
-    book_id = create_res.json()["id"]
-
-    response = await client.get(f"/books/{book_id}") 
+    response = client.get(f'/books/{book_id}')
     assert response.status_code == 200
-    assert response.json()["title"] == "Unique Book"
+    assert "1984" in response.get_data(as_text=True)
+
+def test_delete_book(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    post_response = client.post('/books', json=data)
+    book_id = json.loads(post_response.data)['_id']
+    
+    delete_response = client.delete(f'/books/{book_id}')
+    assert delete_response.status_code == 204
+    
+    get_response = client.get(f'/books/{book_id}')
+    assert get_response.status_code == 404

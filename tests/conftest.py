@@ -1,18 +1,18 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pytest
-import asyncio
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
 from main import app
+from database import books_collection
 
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
 
-@pytest_asyncio.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-@pytest_asyncio.fixture
-async def client():
-    
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
+@pytest.fixture(autouse=True)
+def clean_db():
+    books_collection.delete_many({})
+    yield
