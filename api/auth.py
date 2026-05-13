@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 from fastapi.security import OAuth2PasswordRequestForm
 from services.auth_service import (
     verify_password, get_password_hash, create_access_token, 

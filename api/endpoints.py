@@ -1,20 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
 from services.book_service import BookService
+from middlewares.rate_limiter import rate_limit
 from services.auth_service import get_current_user
 from schemas.book import BookResponse, BookCreate
 
-router = APIRouter(prefix="/books", tags=["Books"])
+# Додаємо rate_limit до всього роутера [cite: 47]
+router = APIRouter(
+    prefix="/books",
+    tags=["Books"],
+    dependencies=[Depends(rate_limit)]
+)
 
+# Цей ендпоінт ПУБЛІЧНИЙ, щоб можна було протестувати анонімний ліміт (2/хв)
 @router.get("/", response_model=List[BookResponse])
-async def get_books(
-    status: Optional[str] = None, 
-    author: Optional[str] = None, 
-    sort_by: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
-):
+async def get_books(status: Optional[str] = None, author: Optional[str] = None, sort_by: Optional[str] = None):
     return await BookService.get_books(status, author, sort_by)
 
+# Наступні ендпоінти ЗАХИЩЕНІ: вимагають токен (Depends(get_current_user))
 @router.post("/", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
 async def create_book(book: BookCreate, current_user: dict = Depends(get_current_user)):
     return await BookService.create_book(book.model_dump())

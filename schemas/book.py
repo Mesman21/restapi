@@ -14,7 +14,7 @@ class BookCreate(BookBase):
 class BookResponse(BookBase):
     id: str = Field(alias="_id")
 
-    # Новий спосіб налаштування у Pydantic V2
+  
     model_config = ConfigDict(
         populate_by_name=True,
         from_attributes=True
