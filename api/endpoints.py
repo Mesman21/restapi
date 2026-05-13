@@ -1,32 +1,35 @@
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
-import uuid
-from schemas.book import BookCreate, BookResponse
 from services.book_service import BookService
+from middlewares.rate_limiter import rate_limit
+from services.auth_service import get_current_user
+from schemas.book import BookResponse, BookCreate
 
-router = APIRouter()
-book_service = BookService()
+# Додаємо rate_limit до всього роутера [cite: 47]
+router = APIRouter(
+    prefix="/books",
+    tags=["Books"],
+    dependencies=[Depends(rate_limit)]
+)
 
-@router.get("/books", response_model=List[BookResponse])
-async def get_books(
-    author: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    sort_by: Optional[str] = Query(None)
-):
-    return await book_service.get_all_books(author=author, status=status, sort_by=sort_by)
+# Цей ендпоінт ПУБЛІЧНИЙ, щоб можна було протестувати анонімний ліміт (2/хв)
+@router.get("/", response_model=List[BookResponse])
+async def get_books(status: Optional[str] = None, author: Optional[str] = None, sort_by: Optional[str] = None):
+    return await BookService.get_books(status, author, sort_by)
 
-@router.get("/books/{book_id}", response_model=BookResponse)
-async def get_book(book_id: uuid.UUID):
-    book = await book_service.get_book(book_id)
+# Наступні ендпоінти ЗАХИЩЕНІ: вимагають токен (Depends(get_current_user))
+@router.post("/", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
+async def create_book(book: BookCreate, current_user: dict = Depends(get_current_user)):
+    return await BookService.create_book(book.model_dump())
+
+@router.get("/{book_id}", response_model=BookResponse)
+async def get_book(book_id: str, current_user: dict = Depends(get_current_user)):
+    book = await BookService.get_book(book_id)
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     return book
 
-@router.post("/books", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
-async def create_book(book: BookCreate):
-    return await book_service.create_book(book)
-
-@router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_book(book_id: uuid.UUID):
-    await book_service.delete_book(book_id)
+@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_book(book_id: str, current_user: dict = Depends(get_current_user)):
+    await BookService.delete_book(book_id)
     return None
