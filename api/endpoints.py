@@ -8,8 +8,8 @@ from schemas.book import BookResponse, BookCreate
 
 router = APIRouter(
     prefix="/books",
-    tags=["Books"],
-    dependencies=[Depends(rate_limit)]
+    tags=["Books"]
+    # dependencies=[Depends(rate_limit)] 
 )
 
 
