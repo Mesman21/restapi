@@ -5,7 +5,7 @@ from database import get_users_col, get_books_col
 
 @pytest.mark.asyncio
 async def test_auth_and_books():
-    # 1. Створюємо транспорт для FastAPI
+    
     transport = ASGITransport(app=app)
     
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

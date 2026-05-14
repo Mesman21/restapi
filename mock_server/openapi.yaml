@@ -1,0 +1,157 @@
+openapi: 3.0.0
+info:
+  title: Library API
+  version: 1.0.0
+  description: Mock server for Lab 8 (Full Library API specification)
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string, example: "student1"}
+                password: {type: string, example: "qwerty1234"}
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              example: {"username": "student1", "msg": "User created"}
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login for access token
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string, example: "student1"}
+                password: {type: string, example: "qwerty1234"}
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              example: 
+                access_token: "mock_jwt_token_here"
+                token_type: "bearer"
+
+  /books/:
+    get:
+      tags: [Books]
+      summary: Get all books
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: {type: string, enum: [available, borrowed]}
+        - in: query
+          name: author
+          schema: {type: string}
+        - in: query
+          name: sort_by
+          schema: {type: string}
+      responses:
+        '200':
+          description: List of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookResponse'
+    
+    post:
+      tags: [Books]
+      summary: Create a new book
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreate'
+      responses:
+        '201':
+          description: Book created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+
+  /books/{book_id}:
+    get:
+      tags: [Books]
+      summary: Get a book by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+        '404':
+          description: Book not found
+          
+    delete:
+      tags: [Books]
+      summary: Delete a book
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: {type: string}
+      responses:
+        '204':
+          description: Book successfully deleted
+
+components:
+  schemas:
+    BookCreate:
+      type: object
+      required: [title, author]
+      properties:
+        title: {type: string, example: "Clean Code"}
+        author: {type: string, example: "Robert C. Martin"}
+        year: {type: integer, example: 2008}
+        status: {type: string, enum: [available, borrowed], default: available}
+        
+    BookResponse:
+      type: object
+      required: [id, title, author]
+      properties:
+        id: {type: string, example: "60d5ec49c12431... "}
+        title: {type: string, example: "Clean Code"}
+        author: {type: string, example: "Robert C. Martin"}
+        year: {type: integer, example: 2008}
+        status: {type: string, example: "available"}
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
