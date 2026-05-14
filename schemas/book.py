@@ -1,16 +1,28 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from enum import Enum
 from typing import Optional
-from uuid import UUID
+
+class BookStatus(str, Enum):
+    AVAILABLE = "available"
+    CHECKED_OUT = "checked_out"
+
+class SortBy(str, Enum):
+    TITLE = "title"
+    YEAR = "year"
 
 class BookBase(BaseModel):
-    title: str
-    author: str
-    description: str
-    status: str
+    title: str = Field(..., min_length=1)
+    author: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    status: BookStatus = BookStatus.AVAILABLE
     year: int
 
 class BookCreate(BookBase):
     pass
 
 class BookResponse(BookBase):
-    id: UUID
+    id: str
+
+    class Config:
+        orm_mode = True
+        from_attributes = True

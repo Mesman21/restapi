@@ -1,44 +1,35 @@
-from typing import List, Optional
 import uuid
+from typing import List, Dict, Optional
 from repository.book_repo import BookRepository
-from schemas.book import BookCreate, BookResponse
+from schemas.book import BookCreate
+
+repo = BookRepository()
 
 class BookService:
-    def __init__(self):
-        self.repo = BookRepository()
-
     async def get_all_books(
-        self, 
-        author: Optional[str] = None, 
-        status: Optional[str] = None, 
-        sort_by: Optional[str] = None
-    ) -> List[BookResponse]:
-        books = await self.repo.get_all()
+        self, author: Optional[str] = None, status: Optional[str] = None, sort_by: Optional[str] = None
+    ) -> List[Dict]:
+        books = await repo.get_all()
         
         if author:
-            books = [b for b in books if author.lower() in b["author"].lower()]
+            books = [b for b in books if b["author"].lower() == author.lower()]
         if status:
             books = [b for b in books if b["status"] == status]
-        
+            
         if sort_by == "title":
-            books = sorted(books, key=lambda x: x["title"])
+            books = sorted(books, key=lambda x: x["title"].lower())
         elif sort_by == "year":
             books = sorted(books, key=lambda x: x["year"])
             
-        return [BookResponse(**b) for b in books]
+        return books
 
-    async def get_book(self, book_id: uuid.UUID) -> Optional[BookResponse]:
-        book = await self.repo.get_by_id(book_id)
-        if book:
-            return BookResponse(**book)
-        return None
+    async def get_book_by_id(self, book_id: str) -> Optional[Dict]:
+        return await repo.get_by_id(book_id)
 
-    async def create_book(self, book: BookCreate) -> BookResponse:
-        new_id = uuid.uuid4()
-        book_dict = book.model_dump()
-        book_dict["id"] = new_id
-        await self.repo.add(book_dict)
-        return BookResponse(**book_dict)
+    async def create_book(self, book_in: BookCreate) -> Dict:
+        book_dict = getattr(book_in, "model_dump", book_in.dict)()
+        book_dict["id"] = str(uuid.uuid4())
+        return await repo.create(book_dict)
 
-    async def delete_book(self, book_id: uuid.UUID) -> None:
-        await self.repo.delete(book_id)
+    async def delete_book(self, book_id: str) -> None:
+        await repo.delete(book_id)
