@@ -6,9 +6,26 @@ from services.book_service import BookService
 get_books_spec = {
     "tags": ["Books"],
     "parameters": [
-        {"name": "status", "in": "query", "type": "string"},
-        {"name": "author", "in": "query", "type": "string"},
-        {"name": "sort_by", "in": "query", "type": "string"}
+        {
+            "name": "status", 
+            "in": "query", 
+            "type": "string",
+            "enum": ["наявні в бібліотеці", "видані комусь"],
+            "description": "Фільтр за статусом"
+        },
+        {
+            "name": "author", 
+            "in": "query", 
+            "type": "string",
+            "description": "Фільтр за автором"
+        },
+        {
+            "name": "sort_by", 
+            "in": "query", 
+            "type": "string",
+            "enum": ["title", "year"],
+            "description": "Поле для сортування"
+        }
     ],
     "responses": {
         "200": {"description": "List of books"}
@@ -25,11 +42,15 @@ post_book_spec = {
             "schema": {
                 "type": "object",
                 "properties": {
-                    "title": {"type": "string"},
-                    "author": {"type": "string"},
-                    "description": {"type": "string"},
-                    "status": {"type": "string"},
-                    "year": {"type": "integer"}
+                    "title": {"type": "string", "example": "Кобзар"},
+                    "author": {"type": "string", "example": "Тарас Шевченко"},
+                    "description": {"type": "string", "example": "Збірка поетичних творів"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["наявні в бібліотеці", "видані комусь"],
+                        "example": "наявні в бібліотеці"
+                    },
+                    "year": {"type": "integer", "example": 1840}
                 }
             }
         }
