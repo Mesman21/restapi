@@ -1,10 +1,7 @@
 from fastapi import FastAPI
-from api.endpoints import router as books_router
+from api.endpoints import router
 
-app = FastAPI()
+app = FastAPI(title="Library API", description="Лабораторна робота 1")
 
-@app.get("/")
-async def root():
-    return {"message": "API is running"}
 
-app.include_router(books_router, prefix="/books", tags=["Books"])
+app.include_router(router)

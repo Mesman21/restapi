@@ -4,12 +4,13 @@ from uuid import UUID
 from schemas.book import BookCreate, BookResponse, BookStatus
 from services.book_service import BookService
 
-router = APIRouter(prefix="/books", tags=["Books"])
+
+router = APIRouter(tags=["Books"])
 
 def get_service():
     return BookService()
 
-@router.get("/", response_model=List[BookResponse], status_code=status.HTTP_200_OK)
+@router.get("/books", response_model=List[BookResponse], status_code=status.HTTP_200_OK)
 async def get_all_books(
     status: Optional[BookStatus] = None,
     author: Optional[str] = None,
@@ -18,14 +19,14 @@ async def get_all_books(
 ):
     return await service.get_books(status, author, sort_by)
 
-@router.get("/{book_id}", response_model=BookResponse, status_code=status.HTTP_200_OK)
+@router.get("/books/{book_id}", response_model=BookResponse, status_code=status.HTTP_200_OK)
 async def get_book(book_id: UUID, service: BookService = Depends(get_service)):
     return await service.get_book_by_id(book_id)
 
-@router.post("/", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/books", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
 async def create_book(book: BookCreate, service: BookService = Depends(get_service)):
     return await service.create_book(book)
 
-@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(book_id: UUID, service: BookService = Depends(get_service)):
     await service.delete_book(book_id)

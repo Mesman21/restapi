@@ -8,12 +8,11 @@ class BookStatus(str, Enum):
     BORROWED = "видані комусь"
 
 class BookBase(BaseModel):
-    title: str = Field(..., example="Clean Code")
-    author: str = Field(..., example="Robert C. Martin")
-    description: Optional[str] = Field(None, example="Книга про написання чистого коду")
-    year: int = Field(..., example=2008)
+    title: str = Field(..., json_schema_extra={"example": "Clean Code"})
+    author: str = Field(..., json_schema_extra={"example": "Robert C. Martin"})
+    description: Optional[str] = Field(None, json_schema_extra={"example": "Книга про написання чистого коду"})
+    year: int = Field(..., json_schema_extra={"example": 2008})
     status: BookStatus = Field(default=BookStatus.AVAILABLE)
-
 class BookCreate(BookBase):
     pass
 
