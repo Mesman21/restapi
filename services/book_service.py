@@ -1,44 +1,47 @@
 from typing import List, Optional
-import uuid
+from uuid import UUID, uuid4
+from fastapi import HTTPException, status
+from schemas.book import BookCreate, BookResponse, BookStatus
 from repository.book_repo import BookRepository
-from schemas.book import BookCreate, BookResponse
 
 class BookService:
     def __init__(self):
         self.repo = BookRepository()
 
-    async def get_all_books(
+    async def get_books(
         self, 
-        author: Optional[str] = None, 
-        status: Optional[str] = None, 
+        status_filter: Optional[BookStatus] = None, 
+        author_filter: Optional[str] = None,
         sort_by: Optional[str] = None
-    ) -> List[BookResponse]:
+    ) -> List[Dict]:
         books = await self.repo.get_all()
         
-        if author:
-            books = [b for b in books if author.lower() in b["author"].lower()]
-        if status:
-            books = [b for b in books if b["status"] == status]
-        
-        if sort_by == "title":
-            books = sorted(books, key=lambda x: x["title"])
-        elif sort_by == "year":
-            books = sorted(books, key=lambda x: x["year"])
+       
+        if status_filter:
+            books = [b for b in books if b["status"] == status_filter.value]
+        if author_filter:
+            books = [b for b in books if b["author"].lower() == author_filter.lower()]
             
-        return [BookResponse(**b) for b in books]
+   
+        if sort_by == "title":
+            books.sort(key=lambda x: x["title"].lower())
+        elif sort_by == "year":
+            books.sort(key=lambda x: x["year"])
+            
+        return books
 
-    async def get_book(self, book_id: uuid.UUID) -> Optional[BookResponse]:
+    async def get_book_by_id(self, book_id: UUID) -> Dict:
         book = await self.repo.get_by_id(book_id)
-        if book:
-            return BookResponse(**book)
-        return None
+        if not book:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Книгу не знайдено")
+        return book
 
-    async def create_book(self, book: BookCreate) -> BookResponse:
-        new_id = uuid.uuid4()
-        book_dict = book.model_dump()
-        book_dict["id"] = new_id
-        await self.repo.add(book_dict)
-        return BookResponse(**book_dict)
+    async def create_book(self, book_data: BookCreate) -> Dict:
+        new_book = book_data.model_dump()
+        new_book["id"] = uuid4()
+        new_book["status"] = new_book["status"].value  
+        return await self.repo.add(new_book)
 
-    async def delete_book(self, book_id: uuid.UUID) -> None:
+    async def delete_book(self, book_id: UUID) -> None:
+        
         await self.repo.delete(book_id)

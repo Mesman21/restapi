@@ -1,1 +1,3 @@
-books_db = []
+from typing import List, Dict
+
+books_db: List[Dict] = []
