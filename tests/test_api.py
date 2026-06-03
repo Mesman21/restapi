@@ -1,72 +1,58 @@
-import pytest
-from httpx import AsyncClient, ASGITransport
-from main import app
-from models.storage import books_db
+import json
 
-@pytest.fixture(autouse=True)
-def clear_db():
-    books_db.clear()
-
-@pytest.mark.asyncio
-async def test_create_book():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.post("/books", json={
-            "title": "A",
-            "author": "B",
-            "description": "C",
-            "status": "available",
-            "year": 2026
-        })
+def test_create_book(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    response = client.post('/books', json=data)
     assert response.status_code == 201
-    assert response.json()["title"] == "A"
-    assert "id" in response.json()
+    assert "1984" in response.get_data(as_text=True)
 
-@pytest.mark.asyncio
-async def test_get_books():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        await ac.post("/books", json={
-            "title": "A", 
-            "author": "B", 
-            "description": "C", 
-            "status": "available", 
-            "year": 2026
-        })
-        response = await ac.get("/books")
+def test_get_books(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    client.post('/books', json=data)
+    response = client.get('/books')
     assert response.status_code == 200
-    assert len(response.json()) == 1
+    assert "1984" in response.get_data(as_text=True)
 
-@pytest.mark.asyncio
-async def test_get_book_by_id():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        create_resp = await ac.post("/books", json={
-            "title": "A", 
-            "author": "B", 
-            "description": "C", 
-            "status": "available", 
-            "year": 2026
-        })
-        book_id = create_resp.json()["id"]
-        response = await ac.get(f"/books/{book_id}")
+def test_get_book(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    post_response = client.post('/books', json=data)
+    book_id = json.loads(post_response.data)['_id']
+    
+    response = client.get(f'/books/{book_id}')
     assert response.status_code == 200
-    assert response.json()["id"] == book_id
+    assert "1984" in response.get_data(as_text=True)
 
-@pytest.mark.asyncio
-async def test_delete_book():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        create_resp = await ac.post("/books", json={
-            "title": "A", 
-            "author": "B", 
-            "description": "C", 
-            "status": "available", 
-            "year": 2026
-        })
-        book_id = create_resp.json()["id"]
-        
-        del_resp = await ac.delete(f"/books/{book_id}")
-        assert del_resp.status_code == 204
-        
-        get_resp = await ac.get(f"/books/{book_id}")
-        assert get_resp.status_code == 404
-        
-        del_resp_again = await ac.delete(f"/books/{book_id}")
-        assert del_resp_again.status_code == 204
+def test_delete_book(client):
+    data = {
+        "title": "1984",
+        "author": "George Orwell",
+        "description": "Dystopian novel",
+        "status": "наявні в бібліотеці",
+        "year": 1949
+    }
+    post_response = client.post('/books', json=data)
+    book_id = json.loads(post_response.data)['_id']
+    
+    delete_response = client.delete(f'/books/{book_id}')
+    assert delete_response.status_code == 204
+    
+    get_response = client.get(f'/books/{book_id}')
+    assert get_response.status_code == 404

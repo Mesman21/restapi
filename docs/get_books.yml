@@ -1,0 +1,15 @@
+tags:
+  - Books
+parameters:
+  - name: status
+    in: query
+    type: string
+  - name: author
+    in: query
+    type: string
+  - name: sort_by
+    in: query
+    type: string
+responses:
+  200:
+    description: List of books

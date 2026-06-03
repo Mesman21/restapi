@@ -1,0 +1,12 @@
+tags:
+  - Books
+parameters:
+  - name: book_id
+    in: path
+    type: string
+    required: true
+responses:
+  200:
+    description: Book data
+  404:
+    description: Book not found
